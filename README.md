@@ -1,10 +1,14 @@
 # korma.incubator
 
-I'm an app. I sure don't do much.
+A playground for potential new features and nice utilities for korma.
 
 ## Usage
 
-FIXME
+In a leiningen project add
+
+```clojure
+[korma.incubator "0.1.0-SNAPSHOT"
+```
 
 ## License
 
