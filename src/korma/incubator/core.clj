@@ -455,7 +455,7 @@
     :many-to-many [(many-to-many-keys ent sub-ent opts) sub-ent]
     :has-one      [(get-db-keys ent sub-ent) sub-ent]
     :belongs-to   [(get-db-keys sub-ent ent) ent]
-    :has-many     [(get-db-keys ent sub-ent)]))
+    :has-many     [(get-db-keys ent sub-ent) sub-ent]))
 
 (defn create-rel
   [ent sub-ent type opts]
