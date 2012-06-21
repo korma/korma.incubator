@@ -377,3 +377,98 @@
          (select :test (where {:cool [in []]}))
          "SELECT \"test\".* FROM \"test\" WHERE (\"test\".\"cool\" IN (NULL))"
          )))
+
+;; Entities with many-to-many relationships.
+(declare mtm1 mtm2)
+
+(defentity mtm1
+  (entity-fields :field1)
+  (many-to-many mtm2 :mtm1_mtm2
+                {:lfk :mtm1_id
+                 :rfk :mtm2_id}))
+
+(defentity mtm2
+  (entity-fields :field2)
+  (many-to-many mtm1 :mtm1_mtm2
+                {:lfk :mtm2_id
+                 :rfk :mtm1_id}))
+
+(deftest test-many-to-many
+  (let [actual   (with-out-str (dry-run (select mtm2 (with mtm1))))
+        expected (str "dry run :: SELECT \"mtm2\".* FROM \"mtm2\" :: []\n"
+                      "dry run :: SELECT \"mtm1\".* FROM \"mtm1\" "
+                      "INNER JOIN \"mtm1_mtm2\" ON \"mtm1_mtm2\".\"mtm1_id\" "
+                      "= \"mtm1\".\"id\" "
+                      "WHERE (\"mtm1_mtm2\".\"mtm2_id\" = ?) :: [1]\n")]
+    (is (= actual expected))))
+
+(deftest test-many-to-many-reverse
+  (let [actual   (with-out-str (dry-run (select mtm1 (with mtm2))))
+        expected (str "dry run :: SELECT \"mtm1\".* FROM \"mtm1\" :: []\n"
+                      "dry run :: SELECT \"mtm2\".* FROM \"mtm2\" "
+                      "INNER JOIN \"mtm1_mtm2\" ON \"mtm1_mtm2\".\"mtm2_id\" "
+                      "= \"mtm2\".\"id\" "
+                      "WHERE (\"mtm1_mtm2\".\"mtm1_id\" = ?) :: [1]\n")]
+    (is (= actual expected))))
+
+;; Entities with many-to-many relationships using default keys.
+(declare mtmdk1 mtmdk2)
+
+(defentity mtmdk1
+  (entity-fields :field1)
+  (many-to-many mtmdk2 :mtmdk1_mtmdk2))
+
+(defentity mtmdk2
+  (entity-fields :field2)
+  (many-to-many mtmdk1 :mtmdk1_mtmdk2))
+
+(deftest many-to-many-default-keys
+  (let [actual   (with-out-str (dry-run (select mtmdk2 (with mtmdk1))))
+        expected (str "dry run :: SELECT \"mtmdk2\".* FROM \"mtmdk2\" :: []\n"
+                      "dry run :: SELECT \"mtmdk1\".* FROM \"mtmdk1\" "
+                      "INNER JOIN \"mtmdk1_mtmdk2\" "
+                      "ON \"mtmdk1_mtmdk2\".\"mtmdk1_id\" = \"mtmdk1\".\"id\" "
+                      "WHERE (\"mtmdk1_mtmdk2\".\"mtmdk2_id\" = ?) :: [1]\n")]
+    (is (= actual expected))))
+
+(deftest many-to-many-default-keys-reverse
+  (let [actual   (with-out-str (dry-run (select mtmdk1 (with mtmdk2))))
+        expected (str "dry run :: SELECT \"mtmdk1\".* FROM \"mtmdk1\" :: []\n"
+                      "dry run :: SELECT \"mtmdk2\".* FROM \"mtmdk2\" "
+                      "INNER JOIN \"mtmdk1_mtmdk2\" "
+                      "ON \"mtmdk1_mtmdk2\".\"mtmdk2_id\" = \"mtmdk2\".\"id\" "
+                      "WHERE (\"mtmdk1_mtmdk2\".\"mtmdk1_id\" = ?) :: [1]\n")]
+    (is (= actual expected))))
+
+;; Retrieving entities with has-one and belongs-to relationships separately.
+(declare hobt1 hobt2 hobt3 hobt4)
+
+(defentity hobt1
+  (entity-fields :field1)
+  (has-one hobt2))
+
+(defentity hobt2
+  (entity-fields :field2)
+  (belongs-to hobt1))
+
+(defentity hobt3
+  (entity-fields :field1)
+  (belongs-to hobt4))
+
+(defentity hobt4
+  (entity-fields :field2)
+  (has-one hobt3))
+
+(deftest with-object-has-one-before
+  (let [actual   (with-out-str (dry-run (select hobt1 (with-object hobt2))))
+        expected (str "dry run :: SELECT \"hobt1\".* FROM \"hobt1\" :: []\n"
+                      "dry run :: SELECT \"hobt2\".* FROM \"hobt2\" "
+                      "WHERE (\"hobt2\".\"hobt1_id\" = ?) :: [1]\n")]
+    (is (= actual expected))))
+
+(deftest with-object-belongs-to-after
+  (let [actual   (with-out-str (dry-run (select hobt2 (with-object hobt1))))
+        expected (str "dry run :: SELECT \"hobt2\".* FROM \"hobt2\" :: []\n"
+                      "dry run :: SELECT \"hobt1\".* FROM \"hobt1\" "
+                      "WHERE (\"hobt2\".\"hobt1_id\" = ?) :: [1]\n")]
+    (println actual)))

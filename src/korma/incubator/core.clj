@@ -435,8 +435,8 @@
   "Determines and returns the keys needed for a many-to-many relationship."
   [parent child {:keys [join-table lfk rfk]}]
   {:lpk (raw (eng/prefix parent (:pk parent)))
-   :lfk (raw (eng/prefix {:table (name join-table)} lfk))
-   :rfk (raw (eng/prefix {:table (name join-table)} rfk))
+   :lfk (delay (raw (eng/prefix {:table (name join-table)} @lfk)))
+   :rfk (delay (raw (eng/prefix {:table (name join-table)} @rfk)))
    :rpk (raw (eng/prefix child (:pk child)))
    :join-table join-table})
 
@@ -528,8 +528,8 @@
   `(rel ~ent (var ~sub-ent) :many-to-many
                  (assoc ~opts
                    :join-table ~join-table
-                   :lfk (:lfk ~opts (default-fk-name ~ent))
-                   :rfk (:rfk ~opts (default-fk-name ~sub-ent)))))
+                   :lfk (delay (:lfk ~opts (default-fk-name ~ent)))
+                   :rfk (delay (:rfk ~opts (default-fk-name ~sub-ent))))))
 
 (defn entity-fields
   "Set the fields to be retrieved by default in select queries for the
@@ -623,9 +623,9 @@
             map
             #(assoc % table
                     (select ent
-                            (join :inner join-table (= rfk rpk))
+                            (join :inner join-table (= @rfk rpk))
                             (func)
-                            (where {lfk (get % pk)})))))))
+                            (where {@lfk (get % pk)})))))))
 
 (defn- with-later-fn
   "Returns a function to be used to obtain entities in a relationship with
