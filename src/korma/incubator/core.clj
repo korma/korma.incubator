@@ -381,6 +381,15 @@
         query))
     query))
 
+(defn- get-fkk
+  "Gets the foreign key keyword from a query."
+  [query]
+  (let [rel (-> query :ent :rel)]
+    (when-not (nil? rel)
+      (let [rel (force rel)]
+        (when-not (empty? rel)
+          (-> rel first val deref :fkk))))))
+
 (defn exec
   "Execute a query map and return the results."
   [query]
@@ -394,8 +403,10 @@
      (= *exec-mode* :query) query
      (= *exec-mode* :dry-run) (do
                                 (println "dry run ::" sql "::" (vec params))
-                                (let [pk (-> query :ent :pk)
-                                      results (apply-posts query [{pk 1}])]
+                                (let [pk  (-> query :ent :pk)
+                                      fkk (get-fkk query)
+                                      res (if (nil? fkk) {pk 1} {pk 1 fkk 1})
+                                      results (apply-posts query [res])]
                                   (first results)
                                   results))
      :else (let [results (db/do-query query)]
@@ -440,12 +451,23 @@
    :rpk (raw (eng/prefix child (:pk child)))
    :join-table join-table})
 
+(defn get-belongs-to-keys
+  "Determines and returns the keys needed for belongs-to relationshiops."
+  [parent child]
+  (let [pkk (:pk parent)
+        fkk (keyword (str (:table parent) "_id"))]
+    {:pk  (raw (eng/prefix parent pkk))
+     :fk  (raw (eng/prefix child fkk))
+     :fkk fkk}))
+
 (defn get-db-keys
-  "Determines and returns the keys needed for has-one, has-many and belongs-to
+  "Determines and returns the keys needed for has-one and has-many
    relationshiops."
   [parent child]
-  {:pk (raw (eng/prefix parent (:pk parent)))
-   :fk (raw (eng/prefix child (keyword (str (:table parent) "_id"))))})
+  (let [pkk (:pk parent)
+        fkk (keyword (str (:table parent) "_id"))]
+    {:pk  (raw (eng/prefix parent pkk))
+     :fk  (raw (eng/prefix child fkk))}))
 
 (defn db-keys-and-foreign-ent
   "Determines and returns the database keys and foreign entity for a
@@ -454,7 +476,7 @@
   (condp = type
     :many-to-many [(many-to-many-keys ent sub-ent opts) sub-ent]
     :has-one      [(get-db-keys ent sub-ent) sub-ent]
-    :belongs-to   [(get-db-keys sub-ent ent) ent]
+    :belongs-to   [(get-belongs-to-keys sub-ent ent) ent]
     :has-many     [(get-db-keys ent sub-ent) sub-ent]))
 
 (defn create-rel
@@ -692,27 +714,15 @@
     (with-one-later rel query ent func opts)
     (with-now rel query ent func opts)))
 
-;; FIXME: this will only work with the default naming strategy.
-(defn- extract-field-keyword
-  "Extracts the field keyword from a generated field name.  This method is
-   broken in that it will only work with the default naming strategy.
-   Fortunately, we're using the default naming strategy."
-  [field]
-  (let [{:keys [delimiters]} (or eng/*bound-options* @conf/options)
-        [begin end] delimiters
-        quoted-name (last (string/split (get field :korma.sql.utils/generated) #"[.]"))
-        regex (re-pattern (str "^" begin "|" end "$"))]
-    (keyword (string/replace quoted-name regex ""))))
-
 (defn- with-belongs-to-later
   "Defines the post-query to be used to obtain entities in a belongs-to
    relationship with entities in the current query.  This also allowd the
    entities to be retrieved as separate objects."
   [rel query ent func opts]
-  (let [fk (extract-field-keyword (:fk rel))
-        pk (:pk rel)
+  (let [fkk (:fkk rel)
+        pk  (:pk rel)
         table (keyword (eng/table-alias ent))]
-    (post-query query (with-one-later-fn table ent func fk pk))))
+    (post-query query (with-one-later-fn table ent func fkk pk))))
 
 (defn- with-belongs-to
   "Defines the post-query or join to be used to obtain entities in a belongs-to

@@ -470,5 +470,19 @@
   (let [actual   (with-out-str (dry-run (select hobt2 (with-object hobt1))))
         expected (str "dry run :: SELECT \"hobt2\".* FROM \"hobt2\" :: []\n"
                       "dry run :: SELECT \"hobt1\".* FROM \"hobt1\" "
-                      "WHERE (\"hobt2\".\"hobt1_id\" = ?) :: [1]\n")]
-    (println actual)))
+                      "WHERE (\"hobt1\".\"id\" = ?) :: [1]\n")]
+    (is (= actual expected))))
+
+(deftest with-object-belongs-to-before
+  (let [actual   (with-out-str (dry-run (select hobt3 (with-object hobt4))))
+        expected (str "dry run :: SELECT \"hobt3\".* FROM \"hobt3\" :: []\n"
+                      "dry run :: SELECT \"hobt4\".* FROM \"hobt4\" "
+                      "WHERE (\"hobt4\".\"id\" = ?) :: [1]\n")]
+    (is (= actual expected))))
+
+(deftest with-object-has-one-after
+  (let [actual   (with-out-str (dry-run (select hobt4 (with-object hobt3))))
+        expected (str "dry run :: SELECT \"hobt4\".* FROM \"hobt4\" :: []\n"
+                      "dry run :: SELECT \"hobt3\".* FROM \"hobt3\" "
+                      "WHERE (\"hobt3\".\"hobt4_id\" = ?) :: [1]\n")]
+    (is (= actual expected))))
