@@ -223,8 +223,8 @@
   [query ent rel]
   (if-let [join-table (:join-table rel)]
     (-> query
-        (join* :left join-table (sfns/pred-= (:lpk rel) (:lfk rel)))
-        (join* :left ent (sfns/pred-= (:rfk rel) (:rpk rel))))
+        (join* :left join-table (sfns/pred-= (:lpk rel) @(:lfk rel)))
+        (join* :left ent (sfns/pred-= @(:rfk rel) (:rpk rel))))
     (join* query :left ent (sfns/pred-= (:pk rel) (:fk rel)))))
 
 (defmacro join 

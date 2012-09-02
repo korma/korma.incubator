@@ -411,6 +411,24 @@
                       "WHERE (\"mtm1_mtm2\".\"mtm1_id\" = ?) :: [1]\n")]
     (is (= actual expected))))
 
+(deftest test-many-to-many-join
+  (let [actual   (with-out-str (dry-run (select mtm2 (join mtm1))))
+        expected (str "dry run :: SELECT \"mtm2\".* FROM \"mtm2\" "
+                      "LEFT JOIN \"mtm1_mtm2\" "
+                      "ON \"mtm2\".\"id\" = \"mtm1_mtm2\".\"mtm2_id\" "
+                      "LEFT JOIN \"mtm1\" "
+                      "ON \"mtm1_mtm2\".\"mtm1_id\" = \"mtm1\".\"id\" :: []\n")]
+    (is (= actual expected))))
+
+(deftest test-many-to-many-join-reverse
+  (let [actual   (with-out-str (dry-run (select mtm1 (join mtm2))))
+        expected (str "dry run :: SELECT \"mtm1\".* FROM \"mtm1\" "
+                      "LEFT JOIN \"mtm1_mtm2\" "
+                      "ON \"mtm1\".\"id\" = \"mtm1_mtm2\".\"mtm1_id\" "
+                      "LEFT JOIN \"mtm2\" "
+                      "ON \"mtm1_mtm2\".\"mtm2_id\" = \"mtm2\".\"id\" :: []\n")]
+    (is (= actual expected))))
+
 ;; Entities with many-to-many relationships using default keys.
 (declare mtmdk1 mtmdk2)
 
@@ -438,6 +456,24 @@
                       "INNER JOIN \"mtmdk1_mtmdk2\" "
                       "ON \"mtmdk1_mtmdk2\".\"mtmdk2_id\" = \"mtmdk2\".\"id\" "
                       "WHERE (\"mtmdk1_mtmdk2\".\"mtmdk1_id\" = ?) :: [1]\n")]
+    (is (= actual expected))))
+
+(deftest test-many-to-many-default-keys-join
+  (let [actual   (with-out-str (dry-run (select mtm2 (join mtm1))))
+        expected (str "dry run :: SELECT \"mtm2\".* FROM \"mtm2\" "
+                      "LEFT JOIN \"mtm1_mtm2\" "
+                      "ON \"mtm2\".\"id\" = \"mtm1_mtm2\".\"mtm2_id\" "
+                      "LEFT JOIN \"mtm1\" "
+                      "ON \"mtm1_mtm2\".\"mtm1_id\" = \"mtm1\".\"id\" :: []\n")]
+    (is (= actual expected))))
+
+(deftest test-many-to-many-default-keys-join-reverse
+  (let [actual   (with-out-str (dry-run (select mtm1 (join mtm2))))
+        expected (str "dry run :: SELECT \"mtm1\".* FROM \"mtm1\" "
+                      "LEFT JOIN \"mtm1_mtm2\" "
+                      "ON \"mtm1\".\"id\" = \"mtm1_mtm2\".\"mtm1_id\" "
+                      "LEFT JOIN \"mtm2\" "
+                      "ON \"mtm1_mtm2\".\"mtm2_id\" = \"mtm2\".\"id\" :: []\n")]
     (is (= actual expected))))
 
 ;; Retrieving entities with has-one and belongs-to relationships separately.
